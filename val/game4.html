@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Teddy Hug</title>
+    <link href="https://fonts.googleapis.com/css2?family=Aldrich&family=Pixelify+Sans:wght@400..700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    
+    <style>
+        /* --- CORE STYLES --- */
+        body, html { margin: 0; padding: 0; overflow: hidden; background: #000; font-family: 'Pixelify Sans', sans-serif; }
+        
+        #video-container { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; }
+        video { width: 100%; height: 100%; object-fit: cover; }
+
+        /* APPROACHING LABEL */
+        #approaching-label {
+            position: fixed; top: 40%; left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            color: #fff; font-family: 'Press Start 2P', cursive; font-size: 35px;
+            text-shadow: 4px 4px 0 #ff4b2b; z-index: 5; pointer-events: none; width: 100%; text-align: center;
+        }
+        .zoom-effect { animation: zoomIn 3s ease-in forwards; }
+        @keyframes zoomIn { 0% { transform: translate(-50%, -50%) scale(0.2); opacity: 0; } 20% { opacity: 1; } 80% { opacity: 1; } 100% { transform: translate(-50%, -50%) scale(2); opacity: 0; } }
+
+        /* MODAL SYSTEM */
+        .modal-layer {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(5px);
+            z-index: 10; display: none; 
+            flex-direction: column; justify-content: center; align-items: center;
+            opacity: 0; transition: opacity 0.5s ease;
+        }
+        .modal-layer.active { display: flex; opacity: 1; }
+
+        /* --- TEDDY GAME STYLES --- */
+        .game-card {
+            /* This is the origami paper container */
+            position: relative;
+            width: 400px; height: 400px; /* UPDATED SIZE */
+            background-image: url('teddy/origami.jpg');
+            background-size: cover; background-position: center;
+            border: 8px solid white;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.6);
+            border-radius: 5px;
+            display: flex; flex-direction: column; 
+            justify-content: center; align-items: center;
+            /* overflow: hidden;  <-- REMOVED THIS so it can burst out */
+            z-index: 1; /* Ensure card background is behind teddy layer */
+        }
+
+        /* The Teddy Bear */
+        #teddy-img {
+            width: 150px;
+            transform: scale(0.2); /* Starts tiny */
+            transition: transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Elastic Bounce */
+            pointer-events: none; /* Let clicks pass to container if needed */
+            filter: drop-shadow(0 10px 10px rgba(0,0,0,0.3));
+            z-index: 2; /* Layered above the card background */
+            position: relative;
+        }
+
+        /* Hugged State Animation (Heartbeat) */
+        .hugged {
+            animation: heartBeat 1.5s infinite;
+        }
+        
+        /* NEW: State for when it bursts out of the box */
+        .popped-out {
+             z-index: 100 !important; /* Bring it way to the front above borders */
+             filter: drop-shadow(0 30px 30px rgba(0,0,0,0.5)) !important; /* Deeper shadow for depth */
+        }
+
+        @keyframes heartBeat {
+            0% { transform: scale(1.8); }
+            14% { transform: scale(2.0); }
+            28% { transform: scale(1.8); }
+            42% { transform: scale(2.0); }
+            70% { transform: scale(1.8); }
+        }
+
+        /* Controls */
+        .controls {
+            margin-top: 40px; /* Increased margin since box is bigger */
+            display: flex; flex-direction: column; align-items: center; gap: 15px;
+            z-index: 20;
+        }
+
+        #btn-hug {
+            width: 80px; height: 80px;
+            background: #ff69b4; border: 4px solid white;
+            border-radius: 50%;
+            font-size: 30px; color: white;
+            cursor: pointer;
+            box-shadow: 0 5px 0 #c71585;
+            transition: transform 0.1s, box-shadow 0.1s;
+            display: flex; justify-content: center; align-items: center;
+            user-select: none; -webkit-tap-highlight-color: transparent;
+        }
+
+        #btn-hug:active {
+            transform: translateY(5px);
+            box-shadow: 0 0 0 #c71585;
+            background: #ff1493;
+        }
+
+        .instruction {
+            color: white; font-family: 'Pixelify Sans'; font-size: 18px;
+            text-shadow: 0 2px 4px black; margin-top: 10px;
+        }
+
+        #btn-next-game {
+            display: none; /* Hidden until success */
+            background: #ff4b2b; color: white; border: none; padding: 12px 30px;
+            border-radius: 50px; font-weight: bold; cursor: pointer;
+            font-family: 'Pixelify Sans', sans-serif; font-size: 16px;
+            box-shadow: 0 5px 15px rgba(255, 75, 43, 0.4);
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    </style>
+</head>
+<body>
+
+    <div id="approaching-label">TEDDY HUG</div>
+
+    <audio id="expand-sound" src="teddy/expand.mp3" loop></audio>
+
+    <div id="video-container">
+        <video id="strollVideo" playsinline muted>
+            <source src="stroll.mp4" type="video/mp4">
+        </video>
+    </div>
+
+    <div id="game-layer" class="modal-layer">
+        
+        <div class="game-card">
+            <img src="teddy/teddy.png" id="teddy-img" alt="Teddy">
+        </div>
+
+        <div class="controls">
+            <div class="instruction" id="instruction-text">Hold to Hug</div>
+            
+            <button id="btn-hug">❤️</button>
+            
+            <button id="btn-next-game" onclick="goToGame5()">Promise Vault →</button>
+        </div>
+
+    </div>
+
+    <script>
+        const video = document.getElementById('strollVideo');
+        const teddy = document.getElementById('teddy-img');
+        const hugBtn = document.getElementById('btn-hug');
+        const nextBtn = document.getElementById('btn-next-game');
+        const sound = document.getElementById('expand-sound');
+        const labelTextEl = document.getElementById('instruction-text');
+
+        // --- 1. WALK ENGINE ---
+        const stopTime = 4;
+        const labelTime = 1; 
+
+        let labelTriggered = false;
+        let gamePaused = false;
+
+        window.onload = () => {
+            video.play().catch(() => {
+                document.body.addEventListener('click', () => video.play(), { once: true });
+            });
+        };
+
+        video.addEventListener('timeupdate', () => {
+            if (video.currentTime >= labelTime && !labelTriggered) {
+                const label = document.getElementById('approaching-label');
+                label.classList.add('zoom-effect');
+                labelTriggered = true;
+            }
+            if (video.currentTime >= stopTime && !gamePaused) {
+                video.pause();
+                gamePaused = true;
+                document.getElementById('game-layer').classList.add('active');
+            }
+        });
+
+        function goToGame5() {
+            window.location.href = "game5.html";
+        }
+
+        // --- 2. TEDDY PHYSICS ---
+        let scale = 0.2;     // Start small
+        const maxScale = 1.8; // UPDATED: Increased max scale to burst out
+        const growSpeed = 0.02; 
+        const shrinkSpeed = 0.05;
+        let isHolding = false;
+        let hasHuggedOnce = false;
+
+        // Start Growing
+        function startGrow(e) {
+            e.preventDefault();
+            if (scale >= maxScale) {
+                resetTeddy();
+                return;
+            }
+            
+            isHolding = true;
+            sound.currentTime = 0;
+            sound.play();
+            requestAnimationFrame(growLoop);
+            hugBtn.style.transform = "scale(0.9)";
+        }
+
+        // Stop Growing
+        function stopGrow() {
+            isHolding = false;
+            sound.pause();
+            sound.currentTime = 0;
+            hugBtn.style.transform = "scale(1)";
+            
+            if (scale < maxScale) {
+                requestAnimationFrame(shrinkLoop);
+            }
+        }
+
+        // The Growth Loop
+        function growLoop() {
+            if (!isHolding) return;
+
+            if (scale < maxScale) {
+                scale += growSpeed;
+                teddy.style.transform = `scale(${scale})`;
+                requestAnimationFrame(growLoop);
+            } else {
+                // REACHED MAX SIZE
+                isHolding = false;
+                sound.pause();
+                triggerSuccess();
+            }
+        }
+
+        // The Shrink Loop
+        function shrinkLoop() {
+            if (isHolding || scale >= maxScale || scale <= 0.2) return;
+
+            scale -= shrinkSpeed;
+            if (scale < 0.2) scale = 0.2;
+            teddy.style.transform = `scale(${scale})`;
+            
+            if (scale > 0.2) {
+                requestAnimationFrame(shrinkLoop);
+            }
+        }
+
+        function triggerSuccess() {
+            teddy.classList.add('hugged');
+            teddy.classList.add('popped-out'); // Add the pop-out effect class
+            labelTextEl.innerText = "Teddy Loves You!";
+            
+            if (!hasHuggedOnce) {
+                nextBtn.style.display = 'block';
+                hasHuggedOnce = true;
+                createConfetti();
+            }
+        }
+
+        function resetTeddy() {
+            scale = 0.2;
+            teddy.style.transform = `scale(${scale})`;
+            teddy.classList.remove('hugged');
+            teddy.classList.remove('popped-out'); // Remove effect on reset
+            labelTextEl.innerText = "Hold to Hug";
+        }
+
+        function createConfetti() {
+            const colors = ['❤️', '🧸', '💖'];
+            for(let i=0; i<10; i++) {
+                const el = document.createElement('div');
+                el.innerText = colors[Math.floor(Math.random()*colors.length)];
+                el.style.position = 'absolute';
+                el.style.left = '50%'; top = '50%';
+                el.style.fontSize = '30px';
+                el.style.transition = 'transform 1s ease-out, opacity 1s';
+                document.body.appendChild(el);
+                
+                setTimeout(() => {
+                    const x = (Math.random() - 0.5) * 300;
+                    const y = (Math.random() - 0.5) * 300;
+                    el.style.transform = `translate(${x}px, ${y}px)`;
+                    el.style.opacity = '0';
+                }, 50);
+                setTimeout(() => el.remove(), 1000);
+            }
+        }
+
+        // Events
+        hugBtn.addEventListener('mousedown', startGrow);
+        window.addEventListener('mouseup', stopGrow);
+        hugBtn.addEventListener('touchstart', startGrow, {passive: false});
+        window.addEventListener('touchend', stopGrow);
+
+    </script>
+</body>
+</html>

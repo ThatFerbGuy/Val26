@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Our Journey</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        /* --- CORE STYLES --- */
+        body, html { margin: 0; padding: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', sans-serif; }
+        
+        /* Video Background */
+        #video-container { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; }
+        video { width: 100%; height: 100%; object-fit: cover; }
+
+        /* The UI Overlay System */
+        .modal-layer {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(4px);
+            z-index: 10;
+            display: none; /* Hidden by default */
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            opacity: 0; transition: opacity 0.5s ease;
+        }
+
+        .modal-layer.active { display: flex; opacity: 1; }
+
+        /* Card Container */
+        .game-card {
+            background: white; width: 85%; max-width: 400px;
+            padding: 25px; border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            animation: popUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popUp { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        h2 { color: #ff4b2b; margin-top: 0; font-family: 'Press Start 2P', cursive; font-size: 18px; line-height: 1.5; }
+        p { color: #555; font-size: 15px; }
+
+        .btn {
+            background: #ff4b2b; color: white; border: none; padding: 12px 25px;
+            border-radius: 50px; font-weight: bold; font-size: 16px; margin-top: 15px;
+            cursor: pointer; width: 100%;
+        }
+        .btn:disabled { background: #ccc; }
+
+        /* --- THE APPROACHING LABEL --- */
+        #approaching-label {
+            position: fixed; top: 40%; left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            color: #fff;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 40px;
+            text-shadow: 0 0 10px rgba(0,0,0,0.8), 4px 4px 0 #ff4b2b;
+            z-index: 5; 
+            pointer-events: none; 
+            opacity: 0;
+            width: 100%; text-align: center;
+        }
+
+        .zoom-effect { animation: zoomIn 3s ease-in forwards; }
+
+        @keyframes zoomIn {
+            0% { transform: translate(-50%, -50%) scale(0.2); opacity: 0; }
+            20% { opacity: 1; }
+            80% { opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
+        }
+
+        /* --- GARDEN SCENE CSS --- */
+        .garden-scene {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            background-image: url('imgs/bg.jpg'); /* Make sure this image exists! */
+            background-size: cover;
+            background-position: center;
+            border-radius: 15px;
+            position: relative;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+            margin-bottom: 15px;
+            overflow: hidden;
+        }
+
+        .rose-absolute {
+            position: absolute;
+            font-size: 30px;
+            filter: drop-shadow(0 2px 5px rgba(0,0,0,0.5));
+            cursor: pointer;
+            transition: transform 0.2s, opacity 0.5s;
+            z-index: 10;
+            user-select: none; -webkit-tap-highlight-color: transparent;
+        }
+
+        #garden-overlay-text {
+            position: absolute; bottom: 10px; left: 0; width: 100%;
+            text-align: center; color: white; font-weight: bold;
+            text-shadow: 0 2px 4px #000; pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="approaching-label">ROSE GARDEN</div>
+
+    <div id="video-container">
+        <video id="strollVideo" playsinline muted>
+            <source src="stroll.mp4" type="video/mp4">
+        </video>
+    </div>
+
+    <div id="level-1" class="modal-layer">
+        <div class="game-card">
+            <h2>THE ROSE GARDEN</h2>
+            <p>Pick the 6 roses I planted for you.</p>
+
+            <div class="garden-scene">
+                <div class="rose-absolute" style="top: 70%; left: 10%;" onclick="pickRose(this)">🌹</div>
+                <div class="rose-absolute" style="top: 50%; left: 30%;" onclick="pickRose(this)">🌹</div>
+                <div class="rose-absolute" style="top: 60%; left: 60%;" onclick="pickRose(this)">🌹</div>
+                <div class="rose-absolute" style="top: 80%; left: 80%;" onclick="pickRose(this)">🌹</div>
+                <div class="rose-absolute" style="top: 30%; left: 20%;" onclick="pickRose(this)">🌹</div>
+                <div class="rose-absolute" style="top: 40%; left: 70%;" onclick="pickRose(this)">🌹</div>
+                
+                <div id="garden-overlay-text">Tap a rose...</div>
+            </div>
+
+            <button id="btn-1" class="btn" disabled onclick="goToNextPage()">Collect All 6 →</button>
+        </div>
+    </div>
+
+    <script>
+        const video = document.getElementById('strollVideo');
+        
+        // --- MESSAGES ---
+        const roseMessages = [
+            "You're my favorite person 😗",
+            "I love your smile 😞",
+            "and your eyes 👀🤍",
+            "You mean the world to me 🌍",
+            "I miss you whenever we're apart 😒",
+            "And I completely adore you 💋"
+        ];
+
+        // --- CONFIGURATION ---
+        const timeline = [
+            { 
+                id: 'level-1', 
+                stopTime: 3,       // Video pauses at 3s
+                labelTime: 1,      // Label appears at 1s
+                labelText: "ROSE GARDEN" 
+            }
+        ];
+
+        let currentLevelIndex = 0;
+        let labelTriggered = false;
+        let gamePaused = false;
+        let rosesFound = 0;
+
+        // --- ENGINE ---
+        window.onload = () => {
+            video.play().catch(() => {
+                document.body.addEventListener('click', () => video.play(), { once: true });
+            });
+        };
+
+        video.addEventListener('timeupdate', () => {
+            if (currentLevelIndex >= timeline.length) return;
+
+            const target = timeline[currentLevelIndex];
+            const currentTime = video.currentTime;
+
+            // 1. Trigger Label
+            if (currentTime >= target.labelTime && !labelTriggered) {
+                triggerLabel(target.labelText);
+                labelTriggered = true;
+            }
+
+            // 2. Pause for Game
+            if (currentTime >= target.stopTime && !gamePaused) {
+                video.pause();
+                gamePaused = true;
+                showModal(target.id);
+            }
+        });
+
+        function showModal(id) {
+            document.getElementById(id).classList.add('active');
+        }
+
+        function triggerLabel(text) {
+            const label = document.getElementById('approaching-label');
+            if(label) {
+                label.innerText = text;
+                label.classList.remove('zoom-effect');
+                void label.offsetWidth;
+                label.classList.add('zoom-effect');
+            }
+        }
+
+        // --- REDIRECTION FUNCTION ---
+        function goToNextPage() {
+            window.location.href = "game2.html";
+        }
+
+        // --- GAME LOGIC ---
+        function pickRose(el) {
+            if(el.style.opacity === '0') return; // already picked
+
+            el.style.transform = "scale(2) translateY(-20px)";
+            el.style.opacity = "0";
+            
+            // Show Message
+            const feedbackEl = document.getElementById('garden-overlay-text');
+            if (feedbackEl) {
+                feedbackEl.innerText = roseMessages[rosesFound];
+                feedbackEl.style.color = "#ff4b2b";
+                feedbackEl.style.textShadow = "0 2px 4px rgba(255,255,255,0.8)";
+            }
+
+            rosesFound++;
+
+            // Win Condition
+            if(rosesFound >= 6) {
+                setTimeout(() => {
+                    if (feedbackEl) {
+                        feedbackEl.innerText = "All roses collected! 💖";
+                        feedbackEl.style.color = "#fff";
+                    }
+                    const btn = document.getElementById('btn-1');
+                    btn.disabled = false;
+                    btn.innerText = "Continue Journey →";
+                }, 1500);
+            }
+        }
+    </script>
+</body>
+</html>

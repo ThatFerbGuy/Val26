@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Chocolate Stop</title>
+    <link href="https://fonts.googleapis.com/css2?family=Aldrich&family=Pixelify+Sans:wght@400..700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    
+    <style>
+        /* --- CORE STYLES --- */
+        body, html { margin: 0; padding: 0; overflow: hidden; background: #000; font-family: 'Pixelify Sans', sans-serif; }
+        
+        /* Video Background */
+        #video-container { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; }
+        video { width: 100%; height: 100%; object-fit: cover; }
+
+        /* APPROACHING LABEL */
+        #approaching-label {
+            position: fixed; top: 40%; left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            color: #fff; font-family: 'Press Start 2P', cursive; font-size: 35px;
+            text-shadow: 4px 4px 0 #ff4b2b; z-index: 5; pointer-events: none; width: 100%; text-align: center;
+        }
+        .zoom-effect { animation: zoomIn 3s ease-in forwards; }
+        @keyframes zoomIn { 0% { transform: translate(-50%, -50%) scale(0.2); opacity: 0; } 20% { opacity: 1; } 80% { opacity: 1; } 100% { transform: translate(-50%, -50%) scale(2); opacity: 0; } }
+
+        /* MODAL SYSTEM */
+        .modal-layer {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(5px);
+            z-index: 10; display: none; 
+            flex-direction: column; justify-content: center; align-items: center;
+            opacity: 0; transition: opacity 0.5s ease;
+        }
+        .modal-layer.active { display: flex; opacity: 1; }
+
+        /* --- CHOCOLATE GAME STYLES --- */
+        .game-card {
+            /* We don't use a white card here, we use the board image itself as the container */
+            position: relative;
+            width: 320px; 
+            display: flex; flex-direction: column; align-items: center;
+        }
+
+        .board-container {
+            width: 300px; height: 300px;
+            background-image: url('chocolate/board.jpg');
+            background-size: contain; background-repeat: no-repeat;
+            background-position: center;
+            padding: 24px; /* Adjust this to fit the pieces inside the box border */
+            box-sizing: border-box;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 5px;
+            position: relative;
+            filter: drop-shadow(0 0 15px rgba(139, 69, 19, 0.6));
+        }
+
+        .choco-piece {
+            width: 100%; height: 100%;
+            object-fit: contain;
+            cursor: pointer;
+            transition: transform 0.2s, opacity 0.3s;
+            border-radius: 5px;
+        }
+
+        .choco-piece.selected {
+            transform: scale(1.1);
+            filter: brightness(1.3);
+            border: 2px solid white;
+            box-shadow: 0 0 10px white;
+        }
+
+        .choco-piece.matched {
+            animation: popOut 0.5s forwards;
+        }
+
+        @keyframes popOut {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(0); opacity: 0; }
+        }
+
+        h1 { color: #f4c2c2; font-family: 'Press Start 2P'; font-size: 20px; margin-bottom: 20px; text-shadow: 2px 2px #5a3a2a; text-align: center; }
+        
+        #score-board {
+            color: white; font-size: 18px; margin-bottom: 10px; font-weight: bold;
+        }
+
+        #final-message {
+            display: none;
+            margin-top: 20px;
+            text-align: center;
+            color: #fff;
+            animation: float 2s infinite ease-in-out;
+        }
+
+        #btn-next-game {
+            display: none;
+            margin-top: 15px;
+            background: #ff4b2b; color: white; border: none; padding: 12px 30px;
+            border-radius: 50px; font-weight: bold; cursor: pointer;
+            font-family: 'Pixelify Sans', sans-serif; font-size: 16px;
+            box-shadow: 0 5px 15px rgba(255, 75, 43, 0.4);
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="approaching-label">CHOCOLATE STOP</div>
+
+    <div id="video-container">
+        <video id="strollVideo" playsinline muted>
+            <source src="stroll.mp4" type="video/mp4">
+        </video>
+    </div>
+
+    <div id="game-layer" class="modal-layer">
+        
+        <div class="game-card">
+            <h1>SWEET MATCH</h1>
+            <div id="score-board">Matches: 0 / 3</div>
+
+            <div class="board-container" id="grid">
+                </div>
+
+            <div id="final-message">
+                <h2 style="color: #ffd700; margin:0;"> Umm.., Kaanumbo chocolate vaangi thara 🍫</h2>
+                <button id="btn-next-game" onclick="goToGame4()">Continue Journey →</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const video = document.getElementById('strollVideo');
+        
+        // --- 1. WALK ENGINE ---
+        const stopTime = 4; // Pauses quickly so she gets to the game
+        const labelTime = 1; 
+        const labelText = "CHOCOLATE STOP";
+
+        let labelTriggered = false;
+        let gamePaused = false;
+
+        window.onload = () => {
+            video.play().catch(() => {
+                document.body.addEventListener('click', () => video.play(), { once: true });
+            });
+        };
+
+        video.addEventListener('timeupdate', () => {
+            if (video.currentTime >= labelTime && !labelTriggered) {
+                const label = document.getElementById('approaching-label');
+                label.classList.add('zoom-effect');
+                labelTriggered = true;
+            }
+            if (video.currentTime >= stopTime && !gamePaused) {
+                video.pause();
+                gamePaused = true;
+                document.getElementById('game-layer').classList.add('active');
+            }
+        });
+
+        function goToGame4() {
+            window.location.href = "game4.html";
+        }
+
+        // --- 2. CHOCOLATE GAME LOGIC ---
+        
+        // Configuration
+        const pieces = ['chocolate/p1.jpg', 'chocolate/p2.jpg', 'chocolate/p3.jpg'];
+        const gridEl = document.getElementById('grid');
+        let gridState = []; // Stores indices 0,1,2 representing the piece types
+        let selectedIndex = -1;
+        let matchesCount = 0;
+        const targetMatches = 3;
+
+        // Initialize Grid
+        function initGame() {
+            gridState = [];
+            gridEl.innerHTML = '';
+            for (let i = 0; i < 9; i++) {
+                // Random piece 0-2
+                const type = Math.floor(Math.random() * 3);
+                gridState.push(type);
+                
+                const img = document.createElement('img');
+                img.src = pieces[type];
+                img.className = 'choco-piece';
+                img.dataset.index = i;
+                img.onclick = () => handlePieceClick(i);
+                gridEl.appendChild(img);
+            }
+            // Simple check to ensure we don't start with a winning board (optional, simplified here)
+        }
+
+        function handlePieceClick(index) {
+            if (matchesCount >= targetMatches) return; // Game over
+
+            const imgEls = document.querySelectorAll('.choco-piece');
+
+            // If nothing selected, select this one
+            if (selectedIndex === -1) {
+                selectedIndex = index;
+                imgEls[index].classList.add('selected');
+            } 
+            // If clicking the same one, deselect
+            else if (selectedIndex === index) {
+                selectedIndex = -1;
+                imgEls[index].classList.remove('selected');
+            } 
+            // If clicking a different one, SWAP!
+            else {
+                swapPieces(selectedIndex, index);
+                // Deselect visual
+                imgEls[selectedIndex].classList.remove('selected');
+                selectedIndex = -1;
+            }
+        }
+
+        function swapPieces(idx1, idx2) {
+            // Swap in data array
+            const temp = gridState[idx1];
+            gridState[idx1] = gridState[idx2];
+            gridState[idx2] = temp;
+
+            // Swap visual sources immediately
+            const imgEls = document.querySelectorAll('.choco-piece');
+            const src1 = imgEls[idx1].src;
+            imgEls[idx1].src = imgEls[idx2].src;
+            imgEls[idx2].src = src1;
+
+            // Check for matches
+            setTimeout(checkMatches, 200);
+        }
+
+        function checkMatches() {
+            let matchedIndices = new Set();
+
+            // Check Rows (0,1,2), (3,4,5), (6,7,8)
+            for (let r = 0; r < 9; r += 3) {
+                if (gridState[r] === gridState[r+1] && gridState[r+1] === gridState[r+2]) {
+                    matchedIndices.add(r); matchedIndices.add(r+1); matchedIndices.add(r+2);
+                }
+            }
+
+            // Check Cols (0,3,6), (1,4,7), (2,5,8)
+            for (let c = 0; c < 3; c++) {
+                if (gridState[c] === gridState[c+3] && gridState[c+3] === gridState[c+6]) {
+                    matchedIndices.add(c); matchedIndices.add(c+3); matchedIndices.add(c+6);
+                }
+            }
+
+            if (matchedIndices.size > 0) {
+                handleMatchFound(Array.from(matchedIndices));
+            }
+        }
+
+        function handleMatchFound(indices) {
+            const imgEls = document.querySelectorAll('.choco-piece');
+            
+            // 1. Animate match
+            indices.forEach(i => {
+                imgEls[i].classList.add('matched');
+            });
+
+            // 2. Increment Score
+            matchesCount++;
+            document.getElementById('score-board').innerText = `Matches: ${matchesCount} / ${targetMatches}`;
+
+            // 3. Check Win
+            if (matchesCount >= targetMatches) {
+                setTimeout(() => {
+                    document.getElementById('final-message').style.display = 'block';
+                    document.getElementById('btn-next-game').style.display = 'inline-block';
+                }, 800);
+            } else {
+                // 4. Refill Board (Simplified: just randomize matched slots after delay)
+                setTimeout(() => {
+                    indices.forEach(i => {
+                        const newType = Math.floor(Math.random() * 3);
+                        gridState[i] = newType;
+                        imgEls[i].src = pieces[newType];
+                        imgEls[i].classList.remove('matched');
+                    });
+                    // Re-check in case new spawn creates match (optional recursion, skipped for simplicity)
+                }, 600);
+            }
+        }
+
+        // Start Game
+        initGame();
+
+    </script>
+</body>
+</html>

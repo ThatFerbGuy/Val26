@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>The Promise</title>
+    <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Homemade+Apple&display=swap" rel="stylesheet">
+    
+    <style>
+        /* --- CORE STYLES --- */
+        body, html { margin: 0; padding: 0; overflow: hidden; background: #000; font-family: 'Pixelify Sans', sans-serif; }
+        
+        #video-container { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; }
+        video { width: 100%; height: 100%; object-fit: cover; }
+
+        /* APPROACHING LABEL */
+        #approaching-label {
+            position: fixed; top: 40%; left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            color: #fff; font-family: 'Press Start 2P', cursive; font-size: 35px;
+            text-shadow: 4px 4px 0 #ff4b2b; z-index: 5; pointer-events: none; width: 100%; text-align: center;
+        }
+        .zoom-effect { animation: zoomIn 3s ease-in forwards; }
+        @keyframes zoomIn { 0% { transform: translate(-50%, -50%) scale(0.2); opacity: 0; } 20% { opacity: 1; } 80% { opacity: 1; } 100% { transform: translate(-50%, -50%) scale(2); opacity: 0; } }
+
+        /* MODAL SYSTEM */
+        .modal-layer {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(5px);
+            z-index: 10; display: none; 
+            flex-direction: column; justify-content: center; align-items: center;
+            opacity: 0; transition: opacity 0.5s ease;
+        }
+        .modal-layer.active { display: flex; opacity: 1; }
+
+        /* --- PROMISE CARD STYLES --- */
+        .game-card {
+            width: 400px; height: 400px;
+            position: relative;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+
+        /* The Envelope Video/Image Container */
+        .envelope-view {
+            width: 100%; height: 100%;
+            position: relative;
+            border-radius: 10px;
+            /* overflow: hidden; removed to let paper edges show */
+            box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+        }
+
+        /* 1. The Video Layers */
+        .env-video {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            display: none; /* Hidden initially */
+            border-radius: 10px;
+        }
+
+        /* 2. The Static Open Envelope (Overlay) */
+        #static-envelope {
+            width: 120%; height: 120%;
+            background-image: url('promise/env.png'); /* Your new image */
+            background-size: contain; background-repeat: no-repeat; background-position: center;
+            position: absolute; top: 0; left: 0;
+            display: none; /* Hidden until video ends */
+            flex-direction: column; justify-content: start; align-items: center;
+            text-align: center;
+            padding-top: 80px; /* Push text down to the card area */
+            padding-left: 40px; padding-right: 40px;
+            box-sizing: border-box;
+        }
+
+        /* The Promise Text */
+        .promise-text {
+            font-family: 'Dancing Script', cursive;
+            font-size: 22px; color: #4a3b2a; /* Old ink color */
+            line-height: 1.4;
+            transform: rotate(-1deg); /* Slight tilt */
+            animation: fadeInText 1s ease;
+            text-shadow: 0 1px 1px rgba(255,255,255,0.5);
+        }
+        @keyframes fadeInText { from { opacity: 0; transform: translateY(10px) rotate(-1deg); } to { opacity: 1; transform: translateY(0) rotate(-1deg); } }
+
+        /* 3. The Input Form (Hidden initially) */
+        #write-mode {
+            position: absolute; top: 0; left: 0;
+            width: 120%; height: 120%;
+            background-image: url('promise/paper.png'); /* Your folded paper image */
+            background-size: cover; background-position: center;
+            display: none;
+            flex-direction: column; justify-content: center; align-items: center;
+            padding: 60px; box-sizing: border-box;
+            border-radius: 5px;
+        }
+
+        textarea {
+            width: 90%; height: 200px;
+            background: transparent; /* See through to the paper */
+            border: none;
+            padding: 10px; 
+            font-family: 'Homemade Apple', cursive; /* Handwriting font */
+            font-size: 20px; color: #4a3b2a;
+            margin-bottom: 20px; resize: none; outline: none;
+            line-height: 1.5;
+        }
+        
+        textarea::placeholder { color: rgba(74, 59, 42, 0.5); }
+
+        /* Buttons */
+        .action-btn {
+            margin-top: 25px;
+            background: #ff4b2b; color: white; border: none; padding: 12px 30px;
+            border-radius: 50px; font-weight: bold; cursor: pointer;
+            font-family: 'Pixelify Sans', sans-serif; font-size: 18px;
+            box-shadow: 0 5px 15px rgba(255, 75, 43, 0.4);
+            transition: transform 0.1s;
+            z-index: 20;
+        }
+        .action-btn:active { transform: scale(0.95); }
+
+    </style>
+</head>
+<body>
+
+    <div id="approaching-label">THE PROMISE</div>
+
+    <div id="video-container">
+        <video id="strollVideo" playsinline muted>
+            <source src="stroll.mp4" type="video/mp4">
+        </video>
+    </div>
+
+    <div id="game-layer" class="modal-layer">
+        
+        <div class="game-card">
+            
+            <div class="envelope-view">
+                <video id="vid-open" class="env-video" playsinline muted>
+                    <source src="promise/env.mp4" type="video/mp4">
+                </video>
+
+                <video id="vid-close" class="env-video" playsinline muted>
+                    <source src="promise/rev-env.mp4" type="video/mp4">
+                </video>
+
+                <div id="static-envelope">
+                    <div class="promise-text">
+                        "I've said this already but..<br>
+                        I'll be around as long 
+                        <br> as you need me. <br>
+                        I'll never forget to make 
+                        <br> time for you<br>
+                        and I'll always Love you."<br>
+                        <br>- Kevin
+                    </div>
+                </div>
+
+                <div id="write-mode">
+                    <textarea id="her-promise" placeholder="Write your note here..."></textarea>
+                </div>
+            </div>
+
+            <button id="main-btn" class="action-btn" onclick="handleButtonClick()">Open Envelope</button>
+
+        </div>
+    </div>
+
+    <script>
+        // --- 1. CONFIGURATION ---
+        const telegramBotToken = "YOUR_BOT_TOKEN_HERE"; // <--- PASTE TOKEN
+        const telegramChatId = "YOUR_CHAT_ID_HERE";     // <--- PASTE CHAT ID
+
+        const video = document.getElementById('strollVideo');
+        const vidOpen = document.getElementById('vid-open');
+        const vidClose = document.getElementById('vid-close');
+        const staticEnv = document.getElementById('static-envelope');
+        const writeMode = document.getElementById('write-mode');
+        const mainBtn = document.getElementById('main-btn');
+        const inputField = document.getElementById('her-promise');
+
+        // --- 2. WALK ENGINE ---
+        const stopTime = 4;
+        const labelTime = 1; 
+        let labelTriggered = false;
+        let gamePaused = false;
+
+        window.onload = () => {
+            video.play().catch(() => document.body.addEventListener('click', () => video.play(), { once: true }));
+        };
+
+        video.addEventListener('timeupdate', () => {
+            if (video.currentTime >= labelTime && !labelTriggered) {
+                const label = document.getElementById('approaching-label');
+                label.classList.add('zoom-effect');
+                labelTriggered = true;
+            }
+            if (video.currentTime >= stopTime && !gamePaused) {
+                video.pause();
+                gamePaused = true;
+                document.getElementById('game-layer').classList.add('active');
+            }
+        });
+
+        // --- 3. PROMISE FLOW STATE MACHINE ---
+        let step = 0; 
+        // 0 = Initial (Closed)
+        // 1 = Opening Video Playing
+        // 2 = Open (Reading Promise)
+        // 3 = Writing Mode
+        // 4 = Sending/Closing
+
+        function handleButtonClick() {
+            if (step === 0) {
+                // START OPENING
+                step = 1;
+                mainBtn.style.display = 'none';
+                vidOpen.style.display = 'block';
+                vidOpen.play();
+
+                vidOpen.onended = () => {
+                    // SHOW STATIC LETTER
+                    step = 2;
+                    vidOpen.style.display = 'none';
+                    staticEnv.style.display = 'flex';
+                    
+                    // Update Button
+                    mainBtn.innerText = "Write something for me ✍️";
+                    mainBtn.style.display = 'block';
+                };
+            }
+            else if (step === 2) {
+                // SWITCH TO WRITE MODE
+                step = 3;
+                staticEnv.style.display = 'none';
+                writeMode.style.display = 'flex';
+                mainBtn.innerText = "Send & Seal 💌";
+            }
+            else if (step === 3) {
+                // SENDING
+                const text = inputField.value;
+                if (!text.trim()) {
+                    alert("Nthelum ezhuth monne! 🥺");
+                    return;
+                }
+                
+                step = 4;
+                sendTelegramMessage(text);
+                
+                // Play Closing Animation
+                writeMode.style.display = 'none';
+                mainBtn.style.display = 'none';
+                vidClose.style.display = 'block';
+                vidClose.play();
+
+                vidClose.onended = () => {
+                    // GO TO NEXT GAME
+                    window.location.href = "game6.html";
+                };
+            }
+        }
+
+        // --- 4. TELEGRAM LOGIC ---
+        function sendTelegramMessage(msg) {
+            const message = `💌 NEW PROMISE RECEIVED:\n\n"${msg}"`;
+            const url = `https://api.telegram.org/bot${telegramBotToken}/sendMessage`;
+            const params = { chat_id: ThatFerbGuY, text: message };
+
+            fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(params)
+            })
+            .then(response => console.log("Sent to Telegram"))
+            .catch(error => console.error("Error sending:", error));
+        }
+
+    </script>
+</body>
+</html>

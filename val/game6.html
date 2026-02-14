@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>The Hug Maze</title>
+    <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    
+    <style>
+        /* --- CORE STYLES --- */
+        body, html { margin: 0; padding: 0; overflow: hidden; background: #000; font-family: 'Pixelify Sans', sans-serif; }
+        
+        #video-container { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; }
+        video { width: 100%; height: 100%; object-fit: cover; }
+
+        /* APPROACHING LABEL */
+        #approaching-label {
+            position: fixed; top: 40%; left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            color: #fff; font-family: 'Press Start 2P', cursive; font-size: 35px;
+            text-shadow: 4px 4px 0 #ff4b2b; z-index: 5; pointer-events: none; width: 100%; text-align: center;
+        }
+        .zoom-effect { animation: zoomIn 3s ease-in forwards; }
+        @keyframes zoomIn { 0% { transform: translate(-50%, -50%) scale(0.2); opacity: 0; } 20% { opacity: 1; } 80% { opacity: 1; } 100% { transform: translate(-50%, -50%) scale(2); opacity: 0; } }
+
+        /* MODAL SYSTEM */
+        .modal-layer {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(5px);
+            z-index: 10; display: none; 
+            flex-direction: column; justify-content: center; align-items: center;
+            opacity: 0; transition: opacity 0.5s ease;
+        }
+        .modal-layer.active { display: flex; opacity: 1; }
+
+        /* --- MAZE GAME STYLES --- */
+        .game-card {
+            position: relative;
+            display: flex; flex-direction: column; align-items: center;
+            width: 100%; max-width: 400px;
+        }
+
+        .maze-board {
+            width: 320px; height: 450px; 
+            background-image: url('maze/bg.jpg'); /* Visual Background */
+            background-size: 100% 100%; /* Force stretch to fill */
+            background-repeat: no-repeat;
+            position: relative;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            border: 4px solid #fff;
+            overflow: hidden; /* Keep chars inside */
+        }
+
+        /* Characters */
+        .char {
+            width: 30px; height: 30px; /* Made slightly smaller to fit paths */
+            position: absolute;
+            transition: all 0.1s linear; /* Faster transition for responsive feel */
+            filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));
+            z-index: 10;
+        }
+
+        /* The Glow Effect */
+        .active-char {
+            filter: drop-shadow(0 0 10px #ff00ff) brightness(1.2);
+            animation: bounce 0.5s infinite alternate;
+        }
+        @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-3px); } }
+
+        /* Controls */
+        .controls {
+            margin-top: 20px;
+            display: grid;
+            grid-template-columns: 60px 60px 60px;
+            grid-template-rows: 60px 60px;
+            gap: 10px;
+            justify-items: center;
+        }
+
+        .d-btn {
+            width: 60px; height: 60px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid white; border-radius: 10px;
+            color: white; font-size: 24px; cursor: pointer;
+            display: flex; justify-content: center; align-items: center;
+            user-select: none; -webkit-tap-highlight-color: transparent;
+        }
+        .d-btn:active { background: rgba(255, 75, 43, 0.8); }
+
+        #instruction {
+            color: #ffd700; font-family: 'Press Start 2P'; font-size: 12px;
+            margin-bottom: 15px; text-align: center; text-shadow: 2px 2px 0 #000;
+            line-height: 1.5;
+        }
+
+        /* --- VIDEO OVERLAY FOR HUG --- */
+        #hug-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: black; z-index: 20;
+            display: none; flex-direction: column; justify-content: center; align-items: center;
+        }
+        #hug-video { width: 100%; height: 100%; object-fit: cover; }
+        
+        #final-text {
+            position: absolute; bottom: 40px; 
+            color: white; font-size: 16px; text-align: center; width: 100%;
+            text-shadow: 0 2px 4px black; font-weight: bold;
+            display: none;
+            font-family: 'Pixelify Sans';
+            padding: 0 20px; box-sizing: border-box;
+        }
+
+        #btn-next {
+            position: absolute; bottom: 10px;
+            background: #ff4b2b; color: white; border: none; padding: 10px 20px;
+            border-radius: 20px; font-weight: bold; cursor: pointer;
+            display: none; z-index: 30;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="approaching-label">HUG MAZE</div>
+
+    <canvas id="collision-canvas" width="320" height="450" style="display:none;"></canvas>
+
+    <div id="video-container">
+        <video id="strollVideo" playsinline muted>
+            <source src="stroll.mp4" type="video/mp4">
+        </video>
+    </div>
+
+    <div id="game-layer" class="modal-layer">
+        
+        <div class="game-card">
+            <div id="instruction">Guide the BOY to the heart ❤️</div>
+
+            <div class="maze-board">
+                <div id="hug-overlay">
+                    <video id="hug-video" playsinline muted>
+                        <source src="maze/hug.mp4" type="video/mp4">
+                    </video>
+                    <div id="final-text">Keep this virtual hug<br>until the real one...</div>
+                    <button id="btn-next" onclick="goToNext()">Next Level →</button>
+                </div>
+
+                <img src="maze/boy.png" class="char active-char" id="boy">
+                <img src="maze/girl.png" class="char" id="girl">
+                
+                <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:20px; z-index:5;">💖</div>
+            </div>
+
+            <div class="controls">
+                <div class="d-btn" style="grid-column: 2; grid-row: 1;" onclick="move('up')">⬆️</div>
+                <div class="d-btn" style="grid-column: 1; grid-row: 2;" onclick="move('left')">⬅️</div>
+                <div class="d-btn" style="grid-column: 2; grid-row: 2;" onclick="move('down')">⬇️</div>
+                <div class="d-btn" style="grid-column: 3; grid-row: 2;" onclick="move('right')">➡️</div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const video = document.getElementById('strollVideo');
+        
+        // --- 1. WALK ENGINE ---
+        const stopTime = 4;
+        const labelTime = 1; 
+        let labelTriggered = false;
+        let gamePaused = false;
+
+        window.onload = () => {
+            video.play().catch(() => document.body.addEventListener('click', () => video.play(), { once: true }));
+            initCollision(); // Load the map data
+        };
+
+        video.addEventListener('timeupdate', () => {
+            if (video.currentTime >= labelTime && !labelTriggered) {
+                const label = document.getElementById('approaching-label');
+                label.classList.add('zoom-effect');
+                labelTriggered = true;
+            }
+            if (video.currentTime >= stopTime && !gamePaused) {
+                video.pause();
+                gamePaused = true;
+                document.getElementById('game-layer').classList.add('active');
+            }
+        });
+
+        // --- 2. COLLISION SYSTEM ---
+        const canvas = document.getElementById('collision-canvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        let isMapLoaded = false;
+
+        function initCollision() {
+            const img = new Image();
+            img.src = 'maze/bg.jpg';
+            img.onload = () => {
+                // Draw image to canvas to read pixels
+                ctx.drawImage(img, 0, 0, 320, 450);
+                isMapLoaded = true;
+                updateVisuals(); // Set initial positions
+            };
+        }
+
+        function isWall(x, y) {
+            if (!isMapLoaded) return false;
+            
+            // Get pixel color at the center of the character
+            // Character is 30x30, so center is +15, +15
+            const pixel = ctx.getImageData(x + 15, y + 15, 1, 1).data;
+            const r = pixel[0];
+            const g = pixel[1];
+            const b = pixel[2];
+
+            // HEURISTIC: Walls in your image are GREY. 
+            // Grey means Red, Green, and Blue are roughly equal.
+            // Grass/Path is GREEN or BROWN (Not equal).
+            
+            const difference = Math.abs(r - g) + Math.abs(g - b) + Math.abs(b - r);
+            
+            // If RGB values are very similar (diff < 30), it's a Grey Wall. Block it.
+            if (difference < 30) {
+                return true; // Hit a wall
+            }
+            return false; // Safe to walk
+        }
+
+        // --- 3. MAZE LOGIC ---
+        
+        let turn = 'boy'; 
+        const boy = document.getElementById('boy');
+        const girl = document.getElementById('girl');
+        const instruction = document.getElementById('instruction');
+        const step = 10; // Smaller steps for precision
+
+        // Start Positions (Pixels relative to board 320x450)
+        let boyPos = { x: 5, y: 210 };   // Left Entrance
+        let girlPos = { x: 285, y: 210 }; // Right Entrance
+
+        function updateVisuals() {
+            boy.style.left = boyPos.x + 'px';
+            boy.style.top = boyPos.y + 'px';
+            girl.style.left = girlPos.x + 'px';
+            girl.style.top = girlPos.y + 'px';
+        }
+
+        function move(dir) {
+            let activePos = (turn === 'boy') ? boyPos : girlPos;
+            let nextX = activePos.x;
+            let nextY = activePos.y;
+
+            if (dir === 'up') nextY -= step;
+            if (dir === 'down') nextY += step;
+            if (dir === 'left') nextX -= step;
+            if (dir === 'right') nextX += step;
+
+            // 1. Check Boundaries
+            if (nextX < 0 || nextX > 290 || nextY < 0 || nextY > 420) return;
+
+            // 2. Check Wall Collision
+            if (isWall(nextX, nextY)) {
+                // Shake effect or sound could go here
+                return; 
+            }
+
+            // 3. Move
+            activePos.x = nextX;
+            activePos.y = nextY;
+            updateVisuals();
+            checkWin();
+        }
+
+        function checkWin() {
+            // Target Center (approx 160, 225)
+            const targetX = 160;
+            const targetY = 225;
+            const radius = 30; // Close enough
+
+            let activePos = (turn === 'boy') ? boyPos : girlPos;
+            
+            let dx = Math.abs(activePos.x - targetX);
+            let dy = Math.abs(activePos.y - targetY);
+
+            if (dx < radius && dy < radius) {
+                if (turn === 'boy') {
+                    turn = 'girl';
+                    boy.classList.remove('active-char');
+                    girl.classList.add('active-char');
+                    instruction.innerText = "Now guide the GIRL to the heart 💖";
+                } else {
+                    triggerFinale();
+                }
+            }
+        }
+
+        function triggerFinale() {
+            document.querySelector('.controls').style.display = 'none';
+            instruction.style.display = 'none';
+
+            const overlay = document.getElementById('hug-overlay');
+            const vid = document.getElementById('hug-video');
+            const text = document.getElementById('final-text');
+            const btn = document.getElementById('btn-next');
+
+            overlay.style.display = 'flex';
+            vid.play();
+
+            setTimeout(() => {
+                text.style.display = 'block';
+                btn.style.display = 'block';
+            }, 1000);
+        }
+
+        function goToNext() {
+            window.location.href = "game7.html";
+        }
+
+        // Keyboard
+        document.addEventListener('keydown', (e) => {
+            if (e.key === "ArrowUp") move('up');
+            if (e.key === "ArrowDown") move('down');
+            if (e.key === "ArrowLeft") move('left');
+            if (e.key === "ArrowRight") move('right');
+        });
+
+    </script>
+</body>
+</html>

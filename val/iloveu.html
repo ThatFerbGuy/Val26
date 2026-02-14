@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>For You ❤️</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+
+    <style>
+        /* --- CORE STYLES --- */
+        body, html { 
+            margin: 0; padding: 0; overflow: hidden; 
+            font-family: 'Pixelify Sans', sans-serif; 
+            height: 100%; width: 100%;
+        }
+
+        /* FLEX CONTAINER to fix layout gaps */
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between; /* Pushes content to edges/center */
+            align-items: center;
+        }
+
+        /* 1. BACKGROUND */
+        .bg-layer {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: url('imgs/bg.jpg'); 
+            background-size: cover; background-position: center;
+            filter: blur(5px);
+            z-index: -1;
+            transform: scale(1.1); 
+        }
+
+        /* 2. TITLE (Fixed to Top) */
+        .valentine-title {
+            text-align: center; width: 100%;
+            font-family: 'Press Start 2P', cursive;
+            color: #fff; text-shadow: 4px 4px 0 #ff4b2b;
+            font-size: 24px; line-height: 1.5;
+            margin-top: 60px; /* Space from top edge */
+            z-index: 10;
+        }
+
+        /* 3. ENVELOPE AREA (Centered in remaining space) */
+        .envelope-wrapper {
+            position: relative;
+            /* Allow enough height for the letter to pop up without getting cut off */
+            height: 250px; 
+            width: 100%;
+            display: flex; justify-content: center; align-items: flex-end; /* Align bottom so pop up goes up */
+            margin-bottom: 40px; /* Push it up a bit from buttons */
+        }
+
+        #envelope {
+            position: relative;
+            height: 180px; width: 280px;
+            border-bottom-left-radius: 6px; border-bottom-right-radius: 6px;
+            background-color: #FF6863;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            cursor: pointer;
+        }
+
+        .front { position: absolute; width: 0; height: 0; z-index: 3; }
+
+        .flap {
+            border-top: 98px solid #FF6863;
+            border-left: 140px solid transparent; border-right: 140px solid transparent;
+            border-bottom: 82px solid transparent;
+            transform-origin: top; pointer-events: none;
+        }
+
+        .pocket {
+            border-left: 140px solid #FF8BA0; border-right: 140px solid #FF8BA0;
+            border-bottom: 90px solid #FFA8B5; border-top: 90px solid transparent;
+            border-bottom-left-radius: 6px; border-bottom-right-radius: 6px;
+        }
+
+        .letter {
+            position: relative; background-color: white; width: 90%; height: 95%;
+            top: 5%; border-radius: 10px; box-shadow: 0 2px 26px rgba(0, 0, 0, .12);
+            margin: 0 auto;
+        }
+        
+        .words {
+            position: absolute; left: 10%; width: 80%; height: 14%;
+            font-size: 14px; font-family: 'Pixelify Sans', sans-serif; color: #555;
+            line-height: 1.4;
+        }
+        .line1 { top: 15%; }
+        .line2 { top: 30%; }
+        .line3 { top: 60%; text-align: center; font-size: 20px; }
+        
+        /* Moved line4 higher to ensure visibility */
+        .line4 { top: 75%; text-align: center; font-weight: bold; color: #ff4b2b; }
+
+        /* ANIMATIONS */
+        .open .flap { transform: rotatex(180deg); transition: transform 0.4s ease, z-index 0.6s; z-index: 1; }
+        .close .flap { transform: rotatex(0deg); transition: transform 0.4s 0.6s ease, z-index 1s; z-index: 5; }
+        
+        /* UPDATED: Moves up 120px now so "Love you" clears the pocket */
+        .open .letter { transform: translatey(-120px); transition: transform 0.4s 0.6s ease, z-index 0.6s; z-index: 2; }
+        .close .letter { transform: translatey(0deg); transition: transform 0.4s ease, z-index 1s; z-index: 1; }
+
+        .hearts { position: absolute; top: 90px; left: 0; right: 0; z-index: 2; pointer-events: none; }
+        .heart { position: absolute; bottom: 0; right: 10%; opacity: 0; }
+        .heart:before, .heart:after {
+            position: absolute; content: ""; background: #d00000;
+            width: 50px; height: 80px; left: 50px; top: 0;
+            border-radius: 50px 50px 0 0; transform: rotate(-45deg); transform-origin: 0 100%;
+        }
+        .heart:after { left: 0; transform: rotate(45deg); transform-origin: 100% 100%; }
+        
+        .open .a1 { left: 20%; transform: scale(0.6); opacity: 1; animation: slideUp 4s linear 1, sideSway 2s ease-in-out 4 alternate; }
+        .open .a2 { left: 55%; transform: scale(1); opacity: 1; animation: slideUp 5s linear 1, sideSway 4s ease-in-out 2 alternate; }
+        .open .a3 { left: 10%; transform: scale(0.8); opacity: 1; animation: slideUp 7s linear 1, sideSway 2s ease-in-out 6 alternate; }
+
+        @keyframes slideUp { 0% { top: 0; } 100% { top: -600px; } }
+        @keyframes sideSway { 0% { margin-left: 0px; } 100% { margin-left: 50px; } }
+
+        /* 4. BUTTONS (Fixed to Bottom) */
+        .controls-container {
+            margin-bottom: 40px; /* Space from bottom edge */
+            display: flex; flex-direction: column; align-items: center; gap: 15px;
+            z-index: 10;
+        }
+
+        .game-btn {
+            background: #ff4b2b; color: white; border: 4px solid white;
+            padding: 12px 30px; border-radius: 50px;
+            font-family: 'Pixelify Sans', sans-serif; font-size: 16px; font-weight: bold;
+            cursor: pointer; box-shadow: 0 5px 10px rgba(0,0,0,0.3);
+            transition: transform 0.1s; min-width: 160px; text-transform: uppercase;
+        }
+        .game-btn:active { transform: scale(0.95); }
+        .game-btn.secondary { background: rgba(255,255,255,0.2); border: 2px solid white; }
+
+    </style>
+</head>
+<body>
+
+    <div class="bg-layer"></div>
+
+    <h1 class="valentine-title">Happy<br>Valentine's Day!</h1>
+
+    <div class="envelope-wrapper">
+        <div id="envelope" class="close">
+            <div class="front flap"></div>
+            <div class="front pocket"></div>
+            <div class="letter">
+                <p class="words line1">Thank you for patient when I made this & whenever I'm a complete monna..😂</p>
+                <p class="words line2"></p>
+                <p class="words line3">💋🤍</p>
+                <p class="words line4">Love you!</p>
+            </div>
+            <div class="hearts">
+                <div class="heart a1"></div>
+                <div class="heart a2"></div>
+                <div class="heart a3"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls-container">
+        <div style="display:flex; gap:15px;">
+            <button id="open" class="game-btn">Open Letter</button>
+            <button id="reset" class="game-btn secondary">Close</button>
+        </div>
+        
+        <button onclick="goToMenu()" class="game-btn" style="background:#2e8b57; margin-top:10px;">
+            ☰ Level Select
+        </button>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            var envelope = $("#envelope");
+            var btn_open = $("#open");
+            var btn_reset = $("#reset");
+
+            envelope.click(function() { open(); });
+            btn_open.click(function() { open(); });
+            btn_reset.click(function() { close(); });
+
+            function open() {
+                envelope.addClass("open").removeClass("close");
+            }
+
+            function close() {
+                envelope.addClass("close").removeClass("open");
+            }
+        });
+
+        function goToMenu() {
+            // Replace 'index.html' with whatever your main menu file is named
+            window.location.href = "levels.html";
+        }
+    </script>
+
+</body>
+</html>

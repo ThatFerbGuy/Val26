@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>The Question</title>
+    <link href="https://fonts.googleapis.com/css2?family=Aldrich&family=Pixelify+Sans:wght@400..700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    
+    <style>
+        /* --- CORE STYLES --- */
+        body, html { margin: 0; padding: 0; overflow: hidden; background: #000; font-family: 'Pixelify Sans', sans-serif; }
+        
+        /* Video Background */
+        #video-container { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; }
+        video { width: 100%; height: 100%; object-fit: cover; }
+
+        /* APPROACHING LABEL */
+        #approaching-label {
+            position: fixed; top: 40%; left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            color: #fff; font-family: 'Press Start 2P', cursive; font-size: 35px;
+            text-shadow: 4px 4px 0 #ff4b2b; z-index: 5; pointer-events: none; width: 100%; text-align: center;
+        }
+        .zoom-effect { animation: zoomIn 3s ease-in forwards; }
+        @keyframes zoomIn { 0% { transform: translate(-50%, -50%) scale(0.2); opacity: 0; } 20% { opacity: 1; } 80% { opacity: 1; } 100% { transform: translate(-50%, -50%) scale(2); opacity: 0; } }
+
+        /* MODAL SYSTEM */
+        .modal-layer {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(5px);
+            z-index: 10; display: none; 
+            flex-direction: column; justify-content: center; align-items: center;
+            opacity: 0; transition: opacity 0.5s ease;
+        }
+        .modal-layer.active { display: flex; opacity: 1; }
+
+        /* --- PROPOSAL GAME STYLES --- */
+        
+        /* 1. Envelope State */
+        #envelope-container { 
+            cursor: pointer; text-align: center; color: white;
+            animation: float 3s ease-in-out infinite; 
+        }
+        #envelope { width: 180px; transition: transform 0.3s; filter: drop-shadow(0 0 10px rgba(255,105,180,0.5)); }
+        #envelope:active { transform: scale(0.9); }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+
+        /* 2. Letter State */
+        #letter-container { display: none; width: 100%; justify-content: center; position: relative; }
+        
+        .letter-window {
+            background: #fff0f5; width: 85%; max-width: 350px;
+            padding: 20px; border-radius: 20px; border: 4px solid #ff69b4;
+            text-align: center; position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            transform: scale(0.8); opacity: 0; transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .letter-window.open { transform: scale(1); opacity: 1; }
+
+        h1 { color: #d63384; font-size: 22px; margin-bottom: 10px; line-height: 1.3; }
+        
+        .cat { width: 140px; border-radius: 10px; margin: 10px 0; }
+
+        .buttons { display: flex; justify-content: center; gap: 20px; margin-top: 15px; width: 100%; }
+        
+        .btn { width: 90px; cursor: pointer; transition: transform 0.2s; }
+        .btn:active { transform: scale(0.9); }
+
+        /* Wrapper to allow the No button to move freely */
+        .no-wrapper { position: relative; width: 90px; height: 50px; }
+        .no-btn { position: absolute; left: 0; top: 0; transition: all 0.3s ease; }
+
+        /* Final State */
+        #final-text { margin-top: 15px; font-size: 16px; color: #d63384; line-height: 1.5; display: none; }
+        
+        #btn-next-game {
+            display: none; /* Hidden until success */
+            margin-top: 15px; width: 100%;
+            background: #ff4b2b; color: white; border: none; padding: 12px;
+            border-radius: 50px; font-weight: bold; cursor: pointer;
+            font-family: 'Pixelify Sans', sans-serif; font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="approaching-label">PROPOSAL STOP</div>
+
+    <div id="video-container">
+        <video id="strollVideo" playsinline muted>
+            <source src="stroll.mp4" type="video/mp4">
+        </video>
+    </div>
+
+    <div id="game-layer" class="modal-layer">
+        
+        <div id="envelope-container">
+            <img src="proposal/envelope.png" alt="Envelope" id="envelope" />
+            <p style="font-size: 20px; margin-top: 15px;">♡ Letter for You ♡</p>
+            <p style="font-size: 12px; opacity: 0.8;">(Tap to open)</p>
+        </div>
+
+        <div id="letter-container">
+            <div class="letter-window">
+                <h1 id="letter-title">Will you be my Valentine?</h1>
+
+                <img src="proposal/cat_heart.gif" class="cat" id="letter-cat" />
+
+                <div class="buttons" id="letter-buttons">
+                    <img src="proposal/yes.png" class="btn yes-btn" alt="Yes" />
+
+                    <div class="no-wrapper">
+                        <img src="proposal/no.png" class="btn no-btn" alt="No" />
+                    </div>
+                </div>
+
+                <div id="final-text">
+                    <p><strong>It's a Date! 😋</strong><br>Eppo vilichalum vannonam 👀🐾<br>Ngaa 😼</p>
+                </div>
+                
+                <button id="btn-next-game" onclick="goToGame3()">Continue Journey →</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const video = document.getElementById('strollVideo');
+        
+        // --- 1. WALK ENGINE CONFIG ---
+        // Since this is a new page, we start at 0, walk for 5 seconds, then stop.
+        const stopTime = 5; 
+        const labelTime = 2; // Label appears at 2s
+        const labelText = "PROPOSAL STOP";
+
+        let labelTriggered = false;
+        let gamePaused = false;
+
+        window.onload = () => {
+            // Optional: You can set video.currentTime = 5; if you want to skip the part she already saw
+            video.play().catch(() => {
+                document.body.addEventListener('click', () => video.play(), { once: true });
+            });
+        };
+
+        video.addEventListener('timeupdate', () => {
+            // Trigger Label
+            if (video.currentTime >= labelTime && !labelTriggered) {
+                const label = document.getElementById('approaching-label');
+                label.classList.add('zoom-effect');
+                labelTriggered = true;
+            }
+
+            // Stop for Game
+            if (video.currentTime >= stopTime && !gamePaused) {
+                video.pause();
+                gamePaused = true;
+                document.getElementById('game-layer').classList.add('active');
+            }
+        });
+
+        function goToGame3() {
+            window.location.href = "game3.html";
+        }
+
+        // --- 2. PROPOSAL LOGIC (Your Code + Mobile Fixes) ---
+        const envelope = document.getElementById("envelope-container");
+        const letter = document.getElementById("letter-container");
+        const noBtn = document.querySelector(".no-btn");
+        const yesBtn = document.querySelector(".yes-btn");
+        const title = document.getElementById("letter-title");
+        const catImg = document.getElementById("letter-cat");
+        const buttons = document.getElementById("letter-buttons");
+        const finalText = document.getElementById("final-text"); // Use div wrapper
+        const nextBtn = document.getElementById("btn-next-game");
+
+        // Open Letter
+        envelope.addEventListener("click", () => {
+            envelope.style.display = "none";
+            letter.style.display = "flex";
+            setTimeout(() => {
+                document.querySelector(".letter-window").classList.add("open");
+            }, 50);
+        });
+
+        // Runaway "No" Button (Mobile + Desktop)
+        function moveBtn() {
+            const min = 50;  // Reduced distance for mobile screens so it stays visible
+            const max = 150;
+            
+            // Calculate random movement
+            const randomX = Math.random() * (max - min) + min;
+            const randomY = Math.random() * (max - min) + min;
+            
+            // Randomize direction (positive or negative)
+            const dirX = Math.random() < 0.5 ? -1 : 1;
+            const dirY = Math.random() < 0.5 ? -1 : 1;
+
+            noBtn.style.transform = `translate(${randomX * dirX}px, ${randomY * dirY}px)`;
+        }
+
+        noBtn.addEventListener("mouseover", moveBtn); // Desktop hover
+        noBtn.addEventListener("click", moveBtn);     // Mobile tap
+        noBtn.addEventListener("touchstart", (e) => { // Mobile touch
+            e.preventDefault(); // Stop it from clicking
+            moveBtn();
+        });
+
+        // Yes Button
+        yesBtn.addEventListener("click", () => {
+            title.textContent = "Yippeeee!";
+            catImg.src = "proposal/cat_dance.gif"; // Changed to folder path
+            
+            // Add final class styling if you had specific CSS for it
+            document.querySelector(".letter-window").classList.add("final");
+
+            buttons.style.display = "none";
+            finalText.style.display = "block";
+            nextBtn.style.display = "block"; // Show the "Go to Game 3" button
+        });
+
+    </script>
+</body>
+</html>

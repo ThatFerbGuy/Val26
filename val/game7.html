@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>The Kiss</title>
+    <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    
+    <style>
+        /* --- CORE STYLES --- */
+        body, html { margin: 0; padding: 0; overflow: hidden; background: #000; font-family: 'Pixelify Sans', sans-serif; }
+        
+        #video-container { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; }
+        video { width: 100%; height: 100%; object-fit: cover; }
+
+        /* APPROACHING LABEL */
+        #approaching-label {
+            position: fixed; top: 40%; left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            color: #fff; font-family: 'Press Start 2P', cursive; font-size: 35px;
+            text-shadow: 4px 4px 0 #ff4b2b; z-index: 5; pointer-events: none; width: 100%; text-align: center;
+        }
+        .zoom-effect { animation: zoomIn 3s ease-in forwards; }
+        @keyframes zoomIn { 0% { transform: translate(-50%, -50%) scale(0.2); opacity: 0; } 20% { opacity: 1; } 80% { opacity: 1; } 100% { transform: translate(-50%, -50%) scale(2); opacity: 0; } }
+
+        /* MODAL SYSTEM */
+        .modal-layer {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(5px);
+            z-index: 10; display: none; 
+            flex-direction: column; justify-content: center; align-items: center;
+            opacity: 0; transition: opacity 0.5s ease;
+        }
+        .modal-layer.active { display: flex; opacity: 1; }
+
+        /* --- STEAMY WINDOW GAME STYLES --- */
+        .game-card {
+            width: 350px; height: 350px;
+            position: relative;
+            border-radius: 15px;
+            box-shadow: 0 0 30px rgba(255, 105, 180, 0.6);
+            overflow: hidden;
+            border: 4px solid white;
+        }
+
+        /* The Image to Reveal */
+        #kiss-bg {
+            width: 100%; height: 100%;
+            background-image: url('kiss.gif'); /* CHANGE THIS if needed */
+            background-size: cover; background-position: center;
+            position: absolute; top: 0; left: 0;
+            z-index: 1;
+        }
+
+        /* The Fog Canvas */
+        #fog-canvas {
+            position: absolute; top: 0; left: 0;
+            z-index: 2;
+            cursor: pointer;
+            touch-action: none; /* Prevents scrolling while wiping */
+        }
+
+        .instruction {
+            position: absolute; bottom: 20px; width: 100%;
+            text-align: center; color: rgba(255,255,255,0.8);
+            font-family: 'Pixelify Sans'; font-size: 18px;
+            z-index: 3; pointer-events: none;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+
+        /* --- VICTORY OVERLAY (Over Stroll Video) --- */
+        #victory-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            display: none; /* Hidden until win */
+            flex-direction: column; justify-content: center; align-items: center;
+            z-index: 100;
+            background: rgba(0,0,0,0.4); /* Slight dim to make text pop */
+        }
+
+        #congrats-text {
+            color: #fff; font-family: 'Press Start 2P'; font-size: 20px;
+            text-align: center; line-height: 1.5;
+            text-shadow: 0 4px 0 #ff4b2b, 0 0 20px rgba(0,0,0,0.8);
+            margin-bottom: 30px;
+            padding: 20px;
+            animation: float 3s ease-in-out infinite;
+        }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
+        #final-btn {
+            background: #ff4b2b; color: white; border: 4px solid white;
+            padding: 15px 30px; border-radius: 50px;
+            font-family: 'Pixelify Sans'; font-size: 18px; font-weight: bold;
+            cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes popIn { from { transform: scale(0); } to { transform: scale(1); } }
+
+    </style>
+</head>
+<body>
+
+    <div id="approaching-label">KISSING BOOTH</div>
+
+    <div id="video-container">
+        <video id="strollVideo" playsinline muted loop>
+            <source src="stroll.mp4" type="video/mp4">
+        </video>
+    </div>
+
+    <div id="game-layer" class="modal-layer">
+        
+        <div class="game-card">
+            <div id="kiss-bg"></div>
+            
+            <canvas id="fog-canvas" width="350" height="350"></canvas>
+            
+            <div class="instruction" id="instruct-txt">Wipe the glass...</div>
+        </div>
+
+    </div>
+
+    <div id="victory-screen">
+        <div id="congrats-text">
+            CONGRATULATIONS!<br>
+            VALENTINE'S WEEK<br>
+            SPEEDRUN COMPLETE 🏆
+        </div>
+        <button id="final-btn" onclick="goToFinalPage()">Click here for a f inal message ❤️</button>
+    </div>
+
+    <script>
+        const video = document.getElementById('strollVideo');
+        
+        // --- 1. WALK ENGINE ---
+        const stopTime = 4;
+        const labelTime = 1; 
+        let labelTriggered = false;
+        let gamePaused = false;
+
+        window.onload = () => {
+            // Ensure video plays
+            video.play().catch(() => document.body.addEventListener('click', () => video.play(), { once: true }));
+        };
+
+        video.addEventListener('timeupdate', () => {
+            if (video.currentTime >= labelTime && !labelTriggered) {
+                const label = document.getElementById('approaching-label');
+                label.classList.add('zoom-effect');
+                labelTriggered = true;
+            }
+            if (video.currentTime >= stopTime && !gamePaused) {
+                video.pause();
+                gamePaused = true;
+                document.getElementById('game-layer').classList.add('active');
+                initFog(); // Start the game logic
+            }
+        });
+
+        // --- 2. STEAMY WINDOW LOGIC ---
+        const canvas = document.getElementById('fog-canvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        let isDrawing = false;
+        let pixelsCleared = 0;
+        let totalPixels = 350 * 350;
+        let won = false;
+
+        function initFog() {
+            // Fill canvas with "Fog"
+            ctx.fillStyle = "rgba(220, 220, 230, 0.9)"; // Misty grey/white
+            ctx.fillRect(0, 0, 350, 350);
+            
+            // Add some "Condensation drops" for realism (optional visual flair)
+            ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+            for(let i=0; i<20; i++) {
+                const x = Math.random() * 350;
+                const y = Math.random() * 350;
+                const s = Math.random() * 5;
+                ctx.beginPath(); ctx.arc(x,y,s,0,Math.PI*2); ctx.fill();
+            }
+
+            // Set blending mode to "Erase"
+            ctx.globalCompositeOperation = 'destination-out';
+        }
+
+        function wipe(x, y) {
+            if (won) return;
+            
+            ctx.beginPath();
+            ctx.arc(x, y, 25, 0, Math.PI * 2); // Brush size
+            ctx.fill();
+            
+            // Optimization: Don't check win on EVERY pixel move, just every 10th or so
+            if (Math.random() > 0.8) checkWin();
+        }
+
+        // Mouse Events
+        canvas.addEventListener('mousedown', () => { isDrawing = true; document.getElementById('instruct-txt').style.opacity = '0'; });
+        canvas.addEventListener('mouseup', () => isDrawing = false);
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isDrawing) return;
+            const rect = canvas.getBoundingClientRect();
+            wipe(e.clientX - rect.left, e.clientY - rect.top);
+        });
+
+        // Touch Events
+        canvas.addEventListener('touchstart', (e) => { 
+            isDrawing = true; 
+            e.preventDefault(); 
+            document.getElementById('instruct-txt').style.opacity = '0'; 
+        });
+        canvas.addEventListener('touchend', () => isDrawing = false);
+        canvas.addEventListener('touchmove', (e) => {
+            if (!isDrawing) return;
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            wipe(touch.clientX - rect.left, touch.clientY - rect.top);
+        });
+
+        function checkWin() {
+            // Count transparent pixels
+            const imgData = ctx.getImageData(0, 0, 350, 350);
+            const data = imgData.data;
+            let transparentCount = 0;
+
+            // Check alpha channel (every 4th value)
+            for (let i = 3; i < data.length; i += 4 * 10) { // Sample every 10th pixel for speed
+                if (data[i] < 128) { // If roughly transparent
+                    transparentCount++;
+                }
+            }
+
+            // If > 60% cleared, trigger win
+            const totalSampled = (350 * 350) / 10;
+            if (transparentCount > totalSampled * 0.6) {
+                triggerWin();
+            }
+        }
+
+        function triggerWin() {
+            won = true;
+            // 1. Fade out fog completely
+            canvas.style.transition = "opacity 1s";
+            canvas.style.opacity = "0";
+            
+            // 2. Wait a moment to see the Kiss GIF
+            setTimeout(() => {
+                // 3. Hide the Game Layer
+                document.getElementById('game-layer').style.opacity = '0';
+                
+                setTimeout(() => {
+                    document.getElementById('game-layer').style.display = 'none';
+                    
+                    // 4. Resume Background Video (Stroll) & Show Victory Screen
+                    video.play();
+                    document.getElementById('victory-screen').style.display = 'flex';
+                }, 1000);
+            }, 3000); // Wait 3 seconds of looking at the kiss
+        }
+
+        function goToFinalPage() {
+            window.location.href = "iloveu.html";
+        }
+    </script>
+</body>
+</html>
