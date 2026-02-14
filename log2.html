@@ -1,0 +1,87 @@
+<script>
+    // --- 1. CONFIGURATION ---
+    // 🔴 STEP 1: Paste your Bot Token here
+    const telegramBotToken = "7043887151:AAEx-6FAnKG4bdL_4NjyTqkWqXKzFmecObo"; 
+    
+    // 🔴 STEP 2: Paste your Numeric Chat ID here
+    const telegramChatId = "1630645028";     
+
+    // --- 2. SELECT ELEMENTS ---
+    const submitBtn = document.querySelector('a[href="#"]'); // Selects the Submit button anchor
+    const nameInput = document.getElementById('nameInput'); // Ensure your HTML input has id="nameInput"
+    const passwordInput = document.getElementById('passwordInput'); // Ensure input has id="passwordInput"
+    const hintIcon = document.getElementById('hintIcon');
+    const hintBox = document.getElementById('hintBox');
+
+    // --- 3. AUTHENTICATION & TELEGRAM LOGIC ---
+    submitBtn.addEventListener('click', function(e) {
+        e.preventDefault(); // Stop default link behavior
+        
+        const enteredName = nameInput.value.trim();
+        const enteredPass = passwordInput.value;
+
+        // CHECK 1: Password Correct?
+        if (enteredPass === '1221') {
+            
+            // CHECK 2: Name Validation
+            // Rule: Must be longer than 5 chars AND must contain a space (Surname)
+            if (enteredName.length <= 5 && !enteredName.includes(' ')) {
+                alert("Full name adi di.. Surname koodi venam! 😤"); // "Enter full name! Need surname too!"
+                return; // Stop here, don't let her in
+            }
+
+            // --- IF WE PASS BOTH CHECKS ---
+
+            // 1. Change button text to show loading
+            submitBtn.innerText = "Processing...";
+
+            // 2. Prepare the Telegram Message
+            const message = `🔐 LOGIN DETECTED:\n\nUser: ${enteredName}\nTime: ${new Date().toLocaleTimeString()}`;
+            
+            // 3. Send to Telegram
+            const url = `https://api.telegram.org/bot${telegramBotToken}/sendMessage`;
+            const params = { 
+                chat_id: 1630645028, 
+                text: message 
+            };
+
+            fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(params)
+            })
+            .then(response => {
+                if(response.ok) {
+                    console.log("Login notified to Telegram");
+                } else {
+                    console.log("Telegram failed, but proceeding anyway.");
+                }
+            })
+            .catch(error => console.error("Telegram Error:", error))
+            .finally(() => {
+                // 4. REDIRECT (Happens whether message succeeds or fails)
+                // Use a small timeout so the user sees the "Processing" change briefly
+                setTimeout(() => {
+                    window.location.href = "val/index.html"; 
+                }, 1000);
+            });
+
+        } else {
+            // Wrong Password
+            alert('Nthaa Devuu🙆‍♂️.. Thetti❌');
+            passwordInput.value = ''; 
+        }
+    });
+
+    // --- 4. HINT LOGIC (Unchanged) ---
+    hintIcon.addEventListener('click', function(e) {
+        e.stopPropagation(); 
+        hintBox.classList.toggle('active');
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!hintBox.contains(e.target) && e.target !== hintIcon) {
+            hintBox.classList.remove('active');
+        }
+    });
+</script>
