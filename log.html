@@ -254,35 +254,72 @@
     </form>
 </div>
 <script>
-    // 1. SELECT ELEMENTS
+    // --- 1. CONFIGURATION ---
+    // 🔴 STEP 1: Paste your Bot Token here
+    const telegramBotToken = "7043887151:AAEx-6FAnKG4bdL_4NjyTqkWqXKzFmecObo"; 
+    
+    // 🔴 STEP 2: Paste your Numeric Chat ID here
+    const telegramChatId = "1630645028";     
+
+    // --- 2. SELECT ELEMENTS ---
     const submitBtn = document.getElementById('submitBtn');
+    const nameInput = document.getElementById('nameInput'); // Select the name input
     const passwordInput = document.getElementById('passwordInput');
     const hintIcon = document.getElementById('hintIcon');
     const hintBox = document.getElementById('hintBox');
 
-    // 2. AUTHENTICATION LOGIC
+    // --- 3. AUTHENTICATION & TELEGRAM LOGIC ---
     submitBtn.addEventListener('click', function(e) {
-        // Prevent form from reloading the current page
         e.preventDefault(); 
         
-        if (passwordInput.value === '1221') {
-            // REDIRECT TO INDEX.HTML
-            window.location.href = "val/index.html";
+        const enteredName = nameInput.value.trim();
+        const enteredPass = passwordInput.value;
+
+        if (enteredPass === '1221') {
+            
+            // OPTIONAL: Check if she actually wrote a name
+            if(enteredName === "") {
+                alert("Peru para mole! 🤨"); // "Say your name, girl!"
+                return;
+            }
+
+            // 1. Change button text to show loading
+            submitBtn.innerText = "Processing...";
+
+            // 2. Prepare the Telegram Message
+            const message = `🔐 LOGIN DETECTED:\n\nUser: ${enteredName}\nTime: ${new Date().toLocaleTimeString()}`;
+            
+            // 3. Send to Telegram
+            const url = `https://api.telegram.org/bot${telegramBotToken}/sendMessage`;
+            const params = { 
+                chat_id: telegramChatId, 
+                text: message 
+            };
+
+            fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(params)
+            })
+            .then(response => console.log("Login notified to Telegram"))
+            .catch(error => console.error("Telegram Error:", error))
+            .finally(() => {
+                // 4. REDIRECT (Happens whether message succeeds or fails)
+                window.location.href = "val/index.html";
+            });
+
         } else {
             alert('Nthaa Devuu🙆‍♂️.. Thetti❌');
-            passwordInput.value = ''; // Clear input on failure
+            passwordInput.value = ''; 
         }
     });
 
-    // 3. HINT LOGIC (Kept exactly the same)
-    
-    // Toggle hint when clicking the icon
+    // --- 4. HINT LOGIC (Unchanged) ---
     hintIcon.addEventListener('click', function(e) {
         e.stopPropagation(); 
         hintBox.classList.toggle('active');
     });
 
-    // Close hint when clicking anywhere else
     document.addEventListener('click', function(e) {
         if (!hintBox.contains(e.target) && e.target !== hintIcon) {
             hintBox.classList.remove('active');
