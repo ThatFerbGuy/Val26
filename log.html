@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Login</title>
+    <style>
+        /* --- YOUR EXISTING STYLES --- */
+        
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: sans-serif;
+            background: linear-gradient(#141e30, #243b55);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-box {
+            width: 400px;
+            padding: 40px;
+            background: rgba(0,0,0,.5);
+            box-sizing: border-box;
+            box-shadow: 0 15px 25px rgba(0,0,0,.6);
+            border-radius: 10px;
+        }
+
+        .login-box h2 {
+            margin: 0 0 30px;
+            padding: 0;
+            color: #fff;
+            text-align: center;
+        }
+
+        .login-box .user-box {
+            position: relative;
+        }
+
+        .login-box .user-box input {
+            width: 100%;
+            padding: 10px 0;
+            font-size: 16px;
+            color: #fff;
+            margin-bottom: 30px;
+            border: none;
+            border-bottom: 1px solid #fff;
+            outline: none;
+            background: transparent;
+        }
+
+        .login-box .user-box label {
+            position: absolute;
+            top: 0;
+            left: 0;
+            padding: 10px 0;
+            font-size: 16px;
+            color: #fff;
+            pointer-events: none;
+            transition: .5s;
+        }
+
+        /* UPDATED: Added :valid selector so the label stays up 
+           when text is entered, not just when focused 
+        */
+        .login-box .user-box input:focus ~ label,
+        .login-box .user-box input:valid ~ label {
+            top: -20px;
+            left: 0;
+            color: #03e9f4;
+            font-size: 12px;
+        }
+
+        .login-box form a {
+            position: relative;
+            display: inline-block;
+            padding: 10px 20px;
+            color: #03e9f4;
+            font-size: 16px;
+            text-decoration: none;
+            text-transform: uppercase;
+            overflow: hidden;
+            transition: .5s;
+            margin-top: 40px;
+            letter-spacing: 4px;
+            cursor: pointer; /* Added cursor pointer */
+        }
+
+        .login-box a:hover {
+            background: #03e9f4;
+            color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 0 5px #03e9f4,
+                        0 0 25px #03e9f4,
+                        0 0 50px #03e9f4,
+                        0 0 100px #03e9f4;
+        }
+
+        .login-box a span {
+            position: absolute;
+            display: block;
+        }
+
+        .login-box a span:nth-child(1) {
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #03e9f4);
+            animation: btn-anim1 1s linear infinite;
+        }
+
+        @keyframes btn-anim1 {
+            0% { left: -100%; }
+            50%,100% { left: 100%; }
+        }
+
+        .login-box a span:nth-child(2) {
+            top: -100%;
+            right: 0;
+            width: 2px;
+            height: 100%;
+            background: linear-gradient(180deg, transparent, #03e9f4);
+            animation: btn-anim2 1s linear infinite;
+            animation-delay: .25s
+        }
+
+        @keyframes btn-anim2 {
+            0% { top: -100%; }
+            50%,100% { top: 100%; }
+        }
+
+        .login-box a span:nth-child(3) {
+            bottom: 0;
+            right: -100%;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(270deg, transparent, #03e9f4);
+            animation: btn-anim3 1s linear infinite;
+            animation-delay: .5s
+        }
+
+        @keyframes btn-anim3 {
+            0% { right: -100%; }
+            50%,100% { right: 100%; }
+        }
+
+        .login-box a span:nth-child(4) {
+            bottom: -100%;
+            left: 0;
+            width: 2px;
+            height: 100%;
+            background: linear-gradient(360deg, transparent, #03e9f4);
+            animation: btn-anim4 1s linear infinite;
+            animation-delay: .75s
+        }
+
+        @keyframes btn-anim4 {
+            0% { bottom: -100%; }
+            50%,100% { bottom: 100%; }
+        }
+
+        /* --- NEW STYLES FOR HINT ICON AND BOX --- */
+        
+        /* The info icon styling */
+        .info-icon {
+            position: absolute;
+            top: 10px; /* Aligns with input text */
+            right: 0;
+            color: #03e9f4; /* Matches your theme color */
+            cursor: pointer;
+            font-size: 18px;
+            z-index: 2;
+            user-select: none;
+        }
+        
+        .info-icon:hover {
+            text-shadow: 0 0 5px #03e9f4;
+        }
+
+        /* The popup hint box */
+        .hint-box {
+            display: none; /* Hidden by default */
+            position: absolute;
+            bottom: 50px; /* Positioned above the input */
+            right: -10px;
+            width: 200px;
+            background: rgba(20, 30, 48, 0.95);
+            border: 1px solid #03e9f4;
+            color: #fff;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            box-shadow: 0 0 10px rgba(3, 233, 244, 0.2);
+            z-index: 10;
+        }
+
+        /* Little arrow pointing down from hint box */
+        .hint-box::after {
+            content: "";
+            position: absolute;
+            bottom: -5px;
+            right: 15px;
+            width: 10px;
+            height: 10px;
+            background: rgba(20, 30, 48, 0.95);
+            border-right: 1px solid #03e9f4;
+            border-bottom: 1px solid #03e9f4;
+            transform: rotate(45deg);
+        }
+
+        /* Class to toggle visibility */
+        .hint-box.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="login-box">
+    <h2>Authentication required 👀</h2>
+    <form>
+           <div class="user-box">
+            <input type="fullname" id="nameInput" required>
+            <label>Enter Full Name</label>
+        </div>
+
+
+        <div class="user-box">
+            <input type="password" id="passwordInput" required>
+            <label>Password</label>
+            
+            <span class="info-icon" id="hintIcon">ⓘ</span>
+            
+            <div class="hint-box" id="hintBox">
+                Hint: Ninte phn password thanne..
+            </div>
+        </div>
+        
+        <a href="#" id="submitBtn">
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            Submit
+        </a>
+    </form>
+</div>
+<script>
+    // 1. SELECT ELEMENTS
+    const submitBtn = document.getElementById('submitBtn');
+    const passwordInput = document.getElementById('passwordInput');
+    const hintIcon = document.getElementById('hintIcon');
+    const hintBox = document.getElementById('hintBox');
+
+    // 2. AUTHENTICATION LOGIC
+    submitBtn.addEventListener('click', function(e) {
+        // Prevent form from reloading the current page
+        e.preventDefault(); 
+        
+        if (passwordInput.value === '1221') {
+            // REDIRECT TO INDEX.HTML
+            window.location.href = "val/index.html";
+        } else {
+            alert('Nthaa Devuu🙆‍♂️.. Thetti❌');
+            passwordInput.value = ''; // Clear input on failure
+        }
+    });
+
+    // 3. HINT LOGIC (Kept exactly the same)
+    
+    // Toggle hint when clicking the icon
+    hintIcon.addEventListener('click', function(e) {
+        e.stopPropagation(); 
+        hintBox.classList.toggle('active');
+    });
+
+    // Close hint when clicking anywhere else
+    document.addEventListener('click', function(e) {
+        if (!hintBox.contains(e.target) && e.target !== hintIcon) {
+            hintBox.classList.remove('active');
+        }
+    });
+</script>
+</body>
+</html>
